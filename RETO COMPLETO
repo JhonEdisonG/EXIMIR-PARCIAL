@@ -1,0 +1,194 @@
+import random
+import matplotlib.pyplot as plt
+
+class Estudiante:
+    def __init__(self, id, nombre):
+        self.id = id
+        self.nombre = nombre
+        self.enrolled_courses = []
+
+    def enroll_course(self, course):
+        if course in self.enrolled_courses:
+            return f"Ya tiene matriculado el curso {course.nombre}, no lo puede volver a matricular"
+        else:
+            course.enrolled_students.append(self)
+            self.enrolled_courses.append(course)
+            return "Matriculación exitosa"
+
+    def cancel_course(self, course):
+        if course in self.enrolled_courses:
+            self.enrolled_courses.remove(course)
+            course.enrolled_students.remove(self)
+            return f"El estudiante {self.nombre} ha cancelado el curso {course.nombre} exitosamente"
+        else:
+            return f"Usted no tiene este curso matriculado"
+
+    def imprimir_cursos_matriculados(self):
+        print(f"Cursos matriculados por el estudiante {self.nombre}:")
+        for course in self.enrolled_courses:
+            print(f"- {course.nombre}")
+    
+class Profesor:
+    def __init__(self, id, nombre):
+        self.id = id
+        self.nombre = nombre
+        self.cursos_dictados = []
+
+    def agregar_curso(self, curso):
+        curso.profesor = self
+        self.cursos_dictados.append(curso)
+
+    def crear_parcial(self, curso, nombre_parcial, porcentaje_parcial, preguntas_parcial):
+        if curso in self.cursos_dictados:
+            parcial = Parcial(nombre_parcial, porcentaje_parcial, preguntas_parcial)
+            curso.agregar_parcial(parcial)
+            return f"El parcial {nombre_parcial} ha sido creado exitosamente para el curso {curso.nombre}"
+        else:
+            return f"El profesor {self.nombre} no dicta el curso {curso.nombre}"
+
+    def evaluar_parcial(self, curso, parcial):
+        if parcial in curso.parciales:
+            for student in curso.enrolled_students:
+                nota = random.randint(0,5)
+                if student.id not in curso.registro_notas:
+                    curso.registro_notas[student.id] = {}
+                else:
+                  curso.registro_notas[student.id][parcial.nombre] = nota
+            return "Parcial evaluado exitosamente"
+        else:
+            return f"El curso {curso.nombre} no tiene un parcial con el nombre {parcial.nombre}"
+
+    def imprimir_cursos_dictados(self):
+        print(f"Cursos dictados por el profesor {self.nombre}:")
+        for course in self.cursos_dictados:
+            print(f"- {course.nombre}")
+
+class Curso:
+    def __init__(self, id, nombre):
+        self.id = id
+        self.nombre = nombre
+        self.profesor = None
+        self.enrolled_students = []
+        self.parciales = []
+        self.registro_notas = {} 
+
+    def agregar_parcial(self, parcial):
+        self.parciales.append(parcial)
+        for student in self.enrolled_students:
+            if student.id not in self.registro_notas:
+                self.registro_notas[student.id] = {}
+            self.registro_notas[student.id][parcial.nombre] = None
+
+    def remove_student(self, student):
+        if student in self.enrolled_students:
+            self.enrolled_students.remove(student)
+            if student.id in self.registro_notas:
+                del self.registro_notas[student.id]
+            print(f"El estudiante {student.nombre} ha sido removido del curso {self.nombre} exitosamente")
+        else:
+            print(f"El estudiante {student.nombre} no esta matriculado en este curso")
+
+    def get_student_list(self):
+        if len(self.enrolled_students) > 0:
+            student_list = []
+            for student in self.enrolled_students:
+                student_list.append(student.nombre)
+            return student_list
+        else:
+            return f"El curso {self.nombre} no tiene estudiantes matriculados"
+
+    def registrar_nota(self, student_id, parcial_nombre, nota):
+        if student_id in self.registro_notas and parcial_nombre in self.registro_notas[student_id]:
+            self.registro_notas[student_id][parcial_nombre] = nota
+            return f"Nota {nota} registrada exitosamente para el estudiante con ID {student_id} en el parcial {parcial_nombre}"
+        else:
+            return f"No se pudo registrar la nota para el estudiante con ID {student_id} en el parcial {parcial_nombre} porque el estudiante no está matriculado en el curso o el parcial no existe"
+
+    def reporte(self):
+        num_ganadores = 0
+        num_perdedores = 0
+        for student_id, notas in self.registro_notas.items():
+            promedio = sum(notas.values()) / len(notas)
+            if promedio >= 3.0:
+                num_ganadores += 1
+            else:
+                num_perdedores += 1
+        plt.pie([num_ganadores, num_perdedores], labels=["Ganadores", "Perdedores"], autopct='%1.1f%%')
+        plt.title(f"Reporte de ganadores y perdedores del curso {self.nombre}")
+        plt.show()
+
+    def grafico_desempeno_estudiante(self, student_id):
+        notas = self.registro_notas.get(student_id)
+        if notas:
+            plt.bar(list(notas.keys()), list(notas.values()))
+            plt.title(f"Desempeño del estudiante con ID {student_id} en el curso {self.nombre}")
+            plt.xlabel("Parcial")
+            plt.ylabel("Nota")
+            plt.ylim((0, 5))
+            plt.show()
+        else:
+            print(f"No se encontró el estudiante con ID {student_id} en el curso {self.nombre}")
+
+class Parcial:
+    def __init__(self, nombre, porcentaje, preguntas):
+        self.nombre = nombre
+        self.porcentaje = porcentaje
+        self.preguntas = preguntas
+
+
+# Creamos curso y profesor
+curso_1 = Curso(1, "Programación I")
+profesor_1 = Profesor(1, "Juan Pérez")
+
+# Agregamos el curso a la lista de cursos dictados por el profesor
+profesor_1.agregar_curso(curso_1)
+
+# Creamos estudiantes
+estudiante_1 = Estudiante(1, "Ana")
+estudiante_2 = Estudiante(2, "Pedro")
+
+# Matriculamos a los estudiantes en el curso
+print(estudiante_1.enroll_course(curso_1))
+print(estudiante_2.enroll_course(curso_1))
+
+# El estudiante intenta matricularse en el mismo curso de nuevo
+print(estudiante_2.enroll_course(curso_1)) 
+
+# Cancelamos la matrícula del estudiante 2 en el curso
+print(estudiante_2.cancel_course(curso_1))
+
+# Intentamos cancelar la matrícula del estudiante 2 de nuevo
+print(estudiante_2.cancel_course(curso_1))  
+print(estudiante_2.enroll_course(curso_1)) 
+
+# Imprimimos los cursos matriculados por el estudiante 1
+estudiante_1.imprimir_cursos_matriculados() 
+
+# Obtenemos la lista de estudiantes matriculados en el curso 1
+print(curso_1.get_student_list())  
+
+# Creamos parciales para los cursos
+profesor_1.crear_parcial(curso_1, "Parcial 1", 15, 5)
+
+# Evaluamos los parciales
+print(profesor_1.evaluar_parcial(curso_1, curso_1.parciales[0]))
+
+# Imprimimos los cursos dictados por el profesor
+profesor_1.imprimir_cursos_dictados()
+
+# Imprimimos los cursos matriculados por un estudiante
+estudiante_1.imprimir_cursos_matriculados()
+estudiante_2.imprimir_cursos_matriculados()
+
+# Imprimimos la lista de estudiantes matriculados en un curso
+print(curso_1.get_student_list())
+
+# Imprimimos el registro de notas de un curso
+print(curso_1.registro_notas)
+
+# Generar reporte de ganadores y perdedores
+curso_1.reporte()
+
+# Ver desempeño de un estudiante específico
+curso_1.grafico_desempeno_estudiante(1)
+curso_1.grafico_desempeno_estudiante(2)
